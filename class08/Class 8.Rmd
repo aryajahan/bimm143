@@ -1,0 +1,280 @@
+---
+title: "Class 8: Machine Learning"
+author: "Arya Jahan"
+date: "April 25, 2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## K-Means Clustering
+
+Let's start with an example of the **kmeans()** function
+
+```{r}
+# Generate some example data for clustering
+tmp <- c(rnorm(30,-3), rnorm(30,3))
+x <- cbind(x=tmp, y=rev(tmp))
+
+plot(x)
+```
+
+To Do:
+- Use the kmeans() function setting k to 2 and nstart=20 
+- Inspect/print the results 
+
+```{r}
+# Practice K means on example data
+# Function is: kmeans(data, centers, nstart)
+
+km <- kmeans(x,2,20)
+km
+```
+
+> Q. How many points are in each cluster?
+  30
+  
+> Q. What ‘component’ of your result object details      
+  - cluster size?     
+  - cluster assignment/membership?      
+  - cluster center?
+  
+```{r}
+km$size
+km$cluster
+km$centers
+```
+
+> Plot x colored by the kmeans cluster assignment and       
+    add cluster centers as blue points
+
+
+```{r}
+plot(x, col=km$cluster)
+points(km$centers, pch=18, col="blue", cex=3)
+```
+
+## Hierarchical Clustering Example
+
+We must give the **hclust()** function a distance matrix, not the raw data as input
+
+```{r}
+# Distance Matrix Calculation
+d <- dist(x)
+
+# Clustering
+hc <- hclust(d)
+plot(hc)
+abline(h=6, col="red")
+```
+
+```{r}
+cutree(hc, k=2)  # Cut into k groups
+```
+
+```{r}
+# Step 1. Generate some example data for clustering
+x <- rbind(  
+  matrix(rnorm(100, mean=0, sd = 0.3), ncol = 2), # c1  
+  matrix(rnorm(100, mean = 1, sd = 0.3), ncol = 2), # c2  
+  matrix(c(rnorm(50, mean = 1, sd = 0.3),           # c3           
+           rnorm(50, mean = 0, sd = 0.3)), ncol = 2))
+
+colnames(x) <- c("x", "y")
+
+# Step 2. Plot the data without clusteringplot(x)
+
+#Step 3. Generate colors for known clusters 
+#         (just so we can compare to hclust results)
+
+col <- as.factor( rep(c("c1","c2","c3"), each=50) ) 
+
+plot(x, col=col)
+```
+
+> Q. Use the dist(), hclust(), plot() and cutree()      
+functions to return 2 and 3 clusters 
+
+```{r}
+hc2 <- hclust(dist(x))
+plot(hc2)
+abline(h=2, col="red")
+abline(h=2.8, col="blue")
+```
+
+```{r}
+# 2 Groups
+gp2 <- cutree(hc2, k=2)
+# 3 Groups
+gp3 <- cutree(hc2, k=3)
+```
+
+```{r}
+gp2
+```
+
+```{r}
+gp3
+```
+
+```{r}
+plot(x, col=gp2)
+```
+
+```{r}
+plot(x, col=gp3)
+```
+
+
+```{r}
+table(gp2)
+```
+
+```{r}
+table(gp3)
+```
+
+```{r}
+table(gp2, gp3)
+```
+
+
+> Q. How does this compare to your known 'col' groups?
+
+# PCA: Principal Component Analysis
+
+We will use the **prcomp()** function for PCA
+```{r}
+#First lets read our example data to work with.
+## You can also download this file from the class website! 
+
+mydata <- read.csv("https://tinyurl.com/expression-CSV",                    row.names=1) 
+
+head(mydata, 10)
+```
+
+100 Genes in this dataset
+```{r}
+nrow(mydata)
+```
+
+10 Experiments for this dataset
+```{r}
+ncol(mydata)
+```
+
+```{r}
+colnames(mydata)
+```
+
+Transpose data
+```{r}
+head(t(mydata))
+```
+
+Run PCA analysis on transpose of dataset
+```{r}
+pca <- prcomp(t(mydata), scale = TRUE)
+```
+
+PCA Plot
+```{r}
+plot(pca$x[,1], pca$x[,2], xlab="PC1", ylab="PC2")
+```
+
+Calculate the percent variance captured in each PC
+```{r}
+## Variance captured per PC 
+pca.var <- pca$sdev^2
+pca.var.per <- round(pca.var/sum(pca.var)*100, 1)
+
+head(pca.var.per)
+```
+
+
+```{r}
+barplot(pca.var.per, main="Scree Plot", xlab="Principal Component", ylab="Percent Variation")
+```
+
+```{r}
+## A vector of colors for wt and ko samples 
+colvec <- colnames(mydata) 
+colvec[grep("wt", colvec)] <- "red"
+colvec[grep("ko", colvec)] <- "blue"
+
+plot(pca$x[,1], pca$x[,2], col=colvec, pch=16,      xlab=paste0("PC1 (", pca.var.per[1], "%)"),      ylab=paste0("PC2 (", pca.var.per[2], "%)"))
+```
+
+
+## Hands-On Section: UK Foods
+
+```{r}
+x <- read.csv("UK_foods.csv", row.names=1)
+```
+
+Q1: Number of Rows and Columns
+```{r}
+nrow(x)
+ncol(x)
+```
+
+```{r}
+head(x, 17)
+```
+
+Q2. Which approach to solving the ‘row-names problem’ mentioned above do you prefer and why? Is one approach more robust than another under certain circumstances?
+- I prefer the row.names argument in the read.csv function because it is simple and starts the dataset off right.
+
+Barplots. Not Useful for differences!
+```{r}
+barplot(as.matrix(x), beside=T, col=rainbow(nrow(x)))
+```
+
+Q3: Changing what optional argument in the above barplot() function results in the following plot?
+- beside = F
+
+### PCA to the Rescue
+
+Transpose so that observations are rows and variables are columns
+```{r}
+pca <- prcomp(t(x))
+summary(pca)
+```
+
+Plot PC1 v PC2
+```{r}
+plot(pca$x[,1], pca$x[,2], xlab="PC1", ylab="PC2", xlim=c(-270,500))
+
+my_colors <- c("red", "dark green", "blue", "purple")
+text(pca$x[,1], pca$x[,2], colnames(x), col=my_colors)
+     
+```
+
+```{r}
+v <- round( pca$sdev^2/sum(pca$sdev^2) * 100 )
+v
+```
+
+```{r}
+z <- summary(pca)
+z$importance
+```
+
+```{r}
+barplot(v, xlab="Principal Component", ylab="Percent Variation")
+```
+
+```{r}
+## Lets focus on PC1 as it accounts for > 90% of variance 
+par(mar=c(10, 3, 0.35, 0))
+barplot( pca$rotation[,1], las=2 )
+```
+
+
+
+
+
+
+
