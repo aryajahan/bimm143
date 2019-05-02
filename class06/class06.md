@@ -1,84 +1,110 @@
----
-title: 'Class 6: R Functions'
-author: "Arya Jahan"
-date: "April 18th, 2019"
-output: github_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+Class 6: R Functions
+================
+Arya Jahan
+April 18th, 2019
 
 ### About
+
 This is my **Class 6** R Markdown document with my *code* and notes for the day.
 
-```{r}
+``` r
 plot(1:10, typ="l", col="blue")
 ```
 
-## Reading in files practice
+![](class06_files/figure-markdown_github/unnamed-chunk-1-1.png)
+
+Reading in files practice
+-------------------------
 
 There are 3 files to read.
 
-```{r}
+``` r
 read.table("test1.txt", header = TRUE, sep=",")
 ```
 
-```{r}
+    ##   Col1 Col2 Col3
+    ## 1    1    2    3
+    ## 2    4    5    6
+    ## 3    7    8    9
+    ## 4    a    b    c
+
+``` r
 read.table("test2.txt", header=TRUE, sep="$")
 ```
 
-```{r}
+    ##   Col1 Col2 Col3
+    ## 1    1    2    3
+    ## 2    4    5    6
+    ## 3    7    8    9
+    ## 4    a    b    c
+
+``` r
 read.table("test3.txt", header = FALSE, sep="")
 ```
 
+    ##   V1 V2 V3
+    ## 1  1  6  a
+    ## 2  2  7  b
+    ## 3  3  8  c
+    ## 4  4  9  d
+    ## 5  5 10  e
 
-## Functions
+Functions
+---------
 
 Our first function example:
 
-```{r}
+``` r
 add <- function(x,y=1) {
   # The body!
   x+y
 }
 ```
 
-```{r}
+``` r
 add(10)
 ```
-```{r}
+
+    ## [1] 11
+
+``` r
 add(10,10)
 ```
 
-```{r}
+    ## [1] 20
+
+``` r
 add( c(1,2,3))
 ```
 
-```{r}
+    ## [1] 2 3 4
+
+``` r
 add( c(1,2,3), 4)
 ```
 
+    ## [1] 5 6 7
+
 Errors to Function:
 
-```{r}
+``` r
 #add(1, "b")
 ```
 
-```{r}
+``` r
 #add(1, 2, 4)
 ```
 
 ### Another Example
 
-```{r}
+``` r
 rescale <- function(x) {   
   rng <-range(x, na.rm=TRUE)   
   (x - rng[1]) / (rng[2] - rng[1])
   }
 ```
 
-```{r}
+``` r
 rescale2 <- function(x, na.rm=TRUE) {   
   
   if(!is.numeric(x)) {
@@ -91,50 +117,67 @@ rescale2 <- function(x, na.rm=TRUE) {
 ```
 
 Non-Numeric Error Example
-```{r}
+
+``` r
 #rescale2( c(1,10, "string"))
 ```
 
 NA Error Example
-```{r}
+
+``` r
 rescale2( c(1,3,NA,10), na.rm = FALSE)
 ```
 
+    ## [1] NA NA NA NA
 
-```{r}
+``` r
 rescale(1:10)
 ```
 
-```{r}
+    ##  [1] 0.0000000 0.1111111 0.2222222 0.3333333 0.4444444 0.5555556 0.6666667
+    ##  [8] 0.7777778 0.8888889 1.0000000
+
+``` r
 #How would you get your function to work here?
 rescale( c(1,2,NA,3,10))
 ```
 
-```{r}
+    ## [1] 0.0000000 0.1111111        NA 0.2222222 1.0000000
+
+``` r
 x <- c(1,2,NA,3,10)
 rng <-range(x, na.rm=TRUE)   
 rng
+```
+
+    ## [1]  1 10
+
+``` r
 (x - rng[1]) / (rng[2] - rng[1])
 ```
 
+    ## [1] 0.0000000 0.1111111        NA 0.2222222 1.0000000
 
 Give Numbers!
-```{r}
+
+``` r
 #What should your function do here?
 #rescale2( c(1,10,"string"))
 ```
 
-
-```{r}
+``` r
 x <- c(1,10,"string")
 
 is.numeric(x)
+```
 
+    ## [1] FALSE
+
+``` r
 #range(x, na.rm=TRUE)
 ```
 
-
-```{r}
+``` r
 rescale3 <- function(x, na.rm=TRUE, plot=FALSE) {   
   
   rng <-range(x, na.rm=na.rm)   
@@ -152,10 +195,26 @@ rescale3 <- function(x, na.rm=TRUE, plot=FALSE) {
   return(answer)}
 ```
 
-```{r}
+``` r
 rescale3( c(1,3,NA,10))
 ```
 
-```{r}
+    ## [1] "Hello"
+    ## [1] "is it me you are looking for?"
+    ## [1] "I can see it in ..."
+
+    ## [1] 0.0000000 0.2222222        NA 1.0000000
+
+``` r
 rescale3( c(1,3,NA,10), plot=TRUE)
 ```
+
+    ## [1] "Hello"
+    ## [1] "is it me you are looking for?"
+
+![](class06_files/figure-markdown_github/unnamed-chunk-23-1.png)
+
+    ## [1] "Please don't sing again..."
+    ## [1] "I can see it in ..."
+
+    ## [1] 0.0000000 0.2222222        NA 1.0000000
