@@ -1,0 +1,250 @@
+---
+title: "Class 14"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Section 2
+
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", row.names=1, stringsAsFactors=FALSE)
+metadata <-  read.csv("airway_metadata.csv")
+```
+
+```{r}
+head(counts)
+head(metadata)
+```
+
+```{r}
+nrow(counts)
+```
+
+```{r}
+colnames(counts)
+```
+
+```{r}
+metadata$id
+```
+
+```{r}
+all( colnames(counts) == metadata$id)
+```
+
+## Section 3. Walk through of gene expression analysis
+
+Our metadata file tells us which columns of the countData are drug treated and control
+
+```{r}
+control.inds <- metadata$dex == "control"
+control <- metadata[control.inds,]
+control
+```
+
+
+```{r}
+head( counts[,control$id] )
+```
+
+```{r}
+control.mean <- rowSums(counts[, control$id]) / length(control$id)
+```
+
+Do same for drug treated experiments...
+
+```{r}
+treated.inds <- metadata$dex == "treated"
+treated <- metadata[treated.inds,]
+treated
+```
+
+```{r}
+treated.mean <- rowSums(counts[, treated$id]) / length(treated$id)
+```
+
+Lets store the control.mean and treated.mean together for ease of use
+
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+```
+
+What is the sum across all genes in control and treated
+
+```{r}
+colSums(meancounts)
+```
+
+```{r}
+plot(meancounts)
+```
+
+Plot on a log-log scale so we can see our data
+
+```{r}
+plot(meancounts, log="xy")
+```
+
+Here we calculate log2foldchange, add it to our meancounts data.frame and inspect the results either with the head() or the View() function for example.
+
+```{r}
+meancounts$log2fc <- log2(meancounts[,"treated.mean"]/meancounts[,"control.mean"])
+head(meancounts)
+```
+
+```{r}
+to.rm <- unique(which( meancounts[,1:2] == 0, arr.ind=TRUE)[,1])
+```
+
+```{r}
+mycounts <- meancounts[-to.rm,]
+nrow(mycounts)
+```
+
+How many genes are up in the drug treated cells
+
+```{r}
+up.inds <- mycounts$log2fc > 2 
+sum(up.inds)
+```
+
+and how many are down
+
+```{r}
+down.inds <- mycounts$log2fc < -2
+sum(down.inds)
+```
+
+```{r}
+head( mycounts[up.inds,])
+```
+
+## Section 4
+
+```{r}
+anno <- read.csv("annotables_grch38.csv")
+head(anno)
+```
+
+Use the **merge()** function to add the annotation data from the `anno` object to our RNA-Seq results in `mycounts`
+```{r}
+mycounts.anno <- merge(mycounts, anno, by.x="row.names", by.y="ensgene")
+mycounts.anno
+```
+
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+```{r}
+columns(org.Hs.eg.db)
+```
+
+We will use the **mapIds()** function from biocomnductor to add annotation data to our results
+
+```{r}
+mycounts$symbol <- mapIds(org.Hs.eg.db, 
+       keys = row.names(mycounts), #the gene names in our dataset
+       keytype="ENSEMBL",          #format of our gene names
+       column="SYMBOL")            #what new data we want to add
+```
+
+```{r}
+head(mycounts)
+```
+
+```{r}
+mycounts$entrez <- mapIds(org.Hs.eg.db, 
+       keys = row.names(mycounts), #the gene names in our dataset
+       keytype="ENSEMBL",          #format of our gene names
+       column="ENTREZID")          #what new data we want to add
+```
+
+```{r}
+head(mycounts)
+```
+
+## Section 5
+
+```{r}
+library("DESeq2")
+```
+
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", stringsAsFactors=FALSE)
+metadata <-  read.csv("airway_metadata.csv", stringsAsFactors = FALSE)
+```
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData=counts, 
+                              colData=metadata, 
+                              design=~dex, 
+                              tidy=TRUE)
+dds
+```
+
+```{r}
+dds <- DESeq(dds)
+```
+
+```{r}
+res <- results(dds)
+head(res)
+```
+
+```{r}
+summary(res)
+```
+
+```{r}
+res05 <- results(dds, alpha=0.05)
+summary(res05)
+```
+
+Store our results as data frame
+```{r}
+res01 <- as.data.frame(results(dds, alpha=0.01))
+head(res01)
+```
+
+Let's sort or order our results by the adjusted p-value
+
+```{r}
+ord.ins <- order(res01$padj)
+write.csv(res01[ord.ins,] , file="signif01_results.csv")
+```
+
+## Volcano Plot
+
+```{r}
+plot(res01$log2FoldChange, -log(res01$padj))
+
+```
+
+```{r}
+mycols <- rep("gray", nrow(res01))
+mycols[ res01$padj < 0.01 ] <- "black"
+#mycols[ abs(res01$log2FoldChange) > 2 ] <- "Blue"
+
+mycols[ (res01$padj < 0.01) & (abs(res01$log2FoldChange) > 2)] <- "red"
+
+plot(res01$log2FoldChange, -log(res01$padj), 
+     xlab="Fold Change (Drug/Control)", 
+     ylab="-log(P-value)",
+     col=mycols)
+
+```
+
+
+
+
+
+
+
+
+
+

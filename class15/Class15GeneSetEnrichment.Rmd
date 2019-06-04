@@ -1,0 +1,216 @@
+---
+title: "Class 15"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## RNA-Seq Analysis
+
+```{r}
+library(DESeq2)
+```
+
+```{r}
+metaFile <- "GSE37704_metadata.csv"
+countFile <- "GSE37704_featurecounts.csv"
+```
+
+```{r}
+colData = read.csv(metaFile, row.names=1)
+head(colData)
+```
+
+```{r}
+countData = read.csv(countFile, row.names=1)
+head(countData)
+```
+
+Need to remove "length" column in `countData`
+
+```{r}
+countData <- as.matrix(countData[,-1])
+head(countData)
+```
+
+Remove the rows with zero counts in all experiments (all columns)
+
+```{r}
+nonzero.rows <- rowSums(countData) != 0
+countData <- countData[nonzero.rows,]
+head(countData)
+```
+
+```{r}
+nrow(countData)
+```
+
+## Running DESeq2
+
+```{r}
+dds <-  DESeqDataSetFromMatrix(countData=countData,
+                               colData=colData,
+                               design=~condition)
+dds <-  DESeq(dds)
+```
+
+Get our results
+
+```{r}
+res <- results(dds)
+summary(res)
+```
+
+Make a volcano plot
+
+```{r}
+plot( res$log2FoldChange, -log(res$padj) )
+abline(v=c(-2,2), col="green", lty=2, lwd=2)
+abline(h=-log(0.01),col="green", lty=2, lwd=2)
+```
+
+```{r}
+# Make a color vector for all genes
+mycols <- rep("gray", nrow(res) )
+
+# Color red the genes with absolute fold change above 2
+mycols[ abs(res$log2FoldChange) > 2 ] <- "red"
+
+# Color blue those with adjusted p-value less than 0.01
+#  and absolute fold change more than 2
+inds <- (res$padj < 0.01) & (abs(res$log2FoldChange) > 2 )
+mycols[ inds ] <- "blue"
+
+plot( res$log2FoldChange, -log(res$padj), col=mycols, xlab="Log2(FoldChange)", ylab="-Log(P-value)" )
+```
+
+## Adding Gene Annotation
+
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+
+columns(org.Hs.eg.db)
+```
+
+```{r}
+res$symbol = mapIds(org.Hs.eg.db,
+                    keys=row.names(res), 
+                    keytype="ENSEMBL",
+                    column="SYMBOL",
+                    multiVals="first")
+
+res$entrez = mapIds(org.Hs.eg.db,
+                    keys=row.names(res),
+                    keytype="ENSEMBL",
+                    column="ENTREZID",
+                    multiVals="first")
+
+res$name =   mapIds(org.Hs.eg.db,
+                    keys=row.names(res),
+                    keytype="ENSEMBL",
+                    column="GENENAME",
+                    multiVals="first")
+```
+
+```{r}
+head(as.data.frame(res))
+```
+
+Write out our ordered and annotated results object
+
+```{r}
+res = res[order(res$pvalue),]
+write.csv(res, file="deseq_results.csv")
+```
+
+## Section 2. Pathway analysis
+
+```{r}
+#install packages in console 
+#BiocManager::install( c("pathview", "gage", "gageData") )
+# then,
+library(pathview)
+library(gage)
+library(gageData)
+```
+
+```{r}
+data(kegg.sets.hs)
+data(sigmet.idx.hs)
+
+# Focus on signaling and metabolic pathways only
+kegg.sets.hs = kegg.sets.hs[sigmet.idx.hs]
+
+# Examine the first 3 pathways
+head(kegg.sets.hs, 3)
+```
+
+Create a vector of FoldChange values that has ENTREZ identifiers as the names of the vector. This is the format that the gage() function wants. 
+
+```{r}
+foldchanges = res$log2FoldChange
+names(foldchanges) = res$entrez
+head(foldchanges)
+```
+
+Run the **gage()** function with this input
+
+```{r}
+keggres = gage(foldchanges, gsets=kegg.sets.hs)
+```
+
+```{r}
+attributes(keggres)
+```
+
+```{r}
+head(keggres$less)
+```
+
+```{r}
+pathview(gene.data=foldchanges, pathway.id="hsa04110")
+```
+
+![](hsa04110.pathview.png)
+
+## Section 3 Gene Ontology
+
+```{r}
+data(go.sets.hs)
+data(go.subs.hs)
+
+# Focus on Biological Process subset of GO
+gobpsets = go.sets.hs[go.subs.hs$BP]
+
+gobpres = gage(foldchanges, gsets=gobpsets, same.dir=TRUE)
+
+lapply(gobpres, head)
+```
+
+## Section 4. Reactome Analysis
+
+```{r}
+sig_genes <- res[res$padj <= 0.05 & !is.na(res$padj), "symbol"]
+print(paste("Total number of significant genes:", length(sig_genes)))
+```
+
+```{r}
+write.table(sig_genes, file="significant_genes.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

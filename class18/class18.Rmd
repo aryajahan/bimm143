@@ -1,0 +1,123 @@
+---
+title: "Class 18"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploring the Cancer Genome Atlas
+
+Install the packages we need:
+
+```{r eval=FALSE}
+#BiocManager::install( c("GenomicDataCommons", "TCGAbiolinks", "maftools"))
+```
+
+Load packages
+
+```{r}
+library(GenomicDataCommons)
+library(TCGAbiolinks)
+library(maftools)
+```
+
+```{r}
+GenomicDataCommons::status()
+```
+
+```{r}
+cases_by_project <- cases() %>%
+  facet("project.project_id") %>%
+  aggregations()
+head(cases_by_project)
+```
+
+```{r}
+x <- cases_by_project$project.project_id
+
+# Make a custom color vector for our plot
+colvec <- rep("lightblue", nrow(x))
+colvec[29] <- "red"
+
+# Plot with 'log' for y axis and rotate labels with 'las'
+#par(___)  
+barplot(x$doc_count, names.arg=x$key, log="y", col=colvec, las=2)
+```
+
+```{r}
+query <- GDCquery(project="TCGA-PAAD",
+                  data.category="Transcriptome Profiling",
+                  data.type="Gene Expression Quantification")
+
+ans <- getResults(query)
+
+head(ans)
+```
+
+## Variant Analysis with R
+
+```{r}
+maf.file <- GDCquery_Maf(tumor="PAAD", pipelines = "mutect")
+```
+
+```{r}
+#vars = read.maf(maf = maf.file, verbose = FALSE)
+```
+
+# Designing a Personalized Cancer Vaccine
+
+## Identify tumor specific 9-mer peptides
+
+```{r}
+library(bio3d)
+seqs <- read.fasta("lecture18_sequences.fa")
+seqs
+```
+
+Now find where the sequences differ
+
+```{r}
+ide <- conserv(seqs, method="identity")
+ide
+```
+
+```{r}
+mis.match.sites <- which(ide < 1)
+gap.sites <- gap.inspect(seqs)$t.inds
+
+```
+
+```{r}
+tumor.sites <- mis.match.sites[ !mis.match.sites %in% gap.sites ]
+```
+
+Identify start and end of 9-mers
+
+```{r}
+start.position <- tumor.sites - 8
+end.position <- tumor.sites + 8
+```
+
+```{r}
+start.position[1]:end.position[1]
+```
+
+Get the tumor sequence
+
+```{r}
+seqs$ali[2, start.position[1]: end.position[1]]
+```
+
+
+
+
+
+
+
+
+
+
+
+
